@@ -90,9 +90,11 @@ jobs:
           build_config: ${{ env.BUILD_CONFIG }}
           lto: ${{ env.LTO }}
 
-      # Package the built kernel into the AnyKernel3 flashable zip template
-      # (kernel-zipping/) and upload that zip as the artifact.
-      - name: Package AnyKernel3 zip
+      # Drop the built kernel into the AnyKernel3 flashable template
+      # (kernel-zipping/). Upload the package *contents* (not a nested zip):
+      # upload-artifact wraps the path in a zip, so uploading package/*
+      # makes the downloaded artifact the flashable zip itself.
+      - name: Prepare AnyKernel3 package
         shell: bash
         run: |
           set -e
@@ -108,15 +110,13 @@ jobs:
           rm -rf package
           cp -r kernel-zipping package
           cp "${IMG}" "package/$(basename "${IMG}")"
-          ZIP="kernel-${{ env.KERNEL_BRANCH }}-${{ github.run_number }}.zip"
-          (cd package && zip -r9 "../${ZIP}" .)
-          ls -lh "${ZIP}"
+          ls -la package
 
       - name: Upload kernel artifacts
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: kernel-${{ env.KERNEL_BRANCH }}-${{ github.run_number }}
-          path: kernel-${{ env.KERNEL_BRANCH }}-${{ github.run_number }}.zip
+          path: package/*
           if-no-files-found: error
           retention-days: 14
