@@ -5,6 +5,10 @@ out/
 *.ko
 *.zip
 
+# AnyKernel3 template: the Image is replaced by the CI build at package time
+kernel-zipping/Image
+package/
+
 # Logs
 *.log
 

@@ -90,11 +90,33 @@ jobs:
           build_config: ${{ env.BUILD_CONFIG }}
           lto: ${{ env.LTO }}
 
+      # Package the built kernel into the AnyKernel3 flashable zip template
+      # (kernel-zipping/) and upload that zip as the artifact.
+      - name: Package AnyKernel3 zip
+        shell: bash
+        run: |
+          set -e
+          DIST="${{ steps.build.outputs.dist_dir }}"
+          if [ -f "${DIST}/Image" ]; then
+            IMG="${DIST}/Image"
+          elif [ -f "${DIST}/Image.lz4" ]; then
+            IMG="${DIST}/Image.lz4"
+          else
+            echo "ERROR: no Image found in ${DIST}" >&2
+            exit 1
+          fi
+          rm -rf package
+          cp -r kernel-zipping package
+          cp "${IMG}" "package/$(basename "${IMG}")"
+          ZIP="kernel-${{ env.KERNEL_BRANCH }}-${{ github.run_number }}.zip"
+          (cd package && zip -r9 "../${ZIP}" .)
+          ls -lh "${ZIP}"
+
       - name: Upload kernel artifacts
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: kernel-${{ env.KERNEL_BRANCH }}-${{ github.run_number }}
-          path: ${{ steps.build.outputs.dist_dir }}/Image*
-          if-no-files-found: warn
+          path: kernel-${{ env.KERNEL_BRANCH }}-${{ github.run_number }}.zip
+          if-no-files-found: error
           retention-days: 14
