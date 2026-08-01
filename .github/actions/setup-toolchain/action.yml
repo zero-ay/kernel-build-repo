@@ -1,40 +1,59 @@
 name: 'Setup Toolchain'
-description: 'Clones host build-tools and downloads the Clang prebuilt (cached)'
+description: 'Clones all prebuilt toolchain/host-tool repos at the exact paths build.sh expects'
 
 inputs:
   clang_version:
     description: 'Clang prebuilt folder name (e.g. clang-r416183b)'
     required: true
-  clang_ref:
-    description: 'Git ref on platform/prebuilts/clang/host/linux-x86 containing clang_version'
-    required: true
+  toolchain_branch:
+    description: 'Branch shared by these prebuilt repos (manifest default revision for this kernel_branch)'
+    required: false
+    default: 'master-kernel-build-2021'
 
 runs:
   using: 'composite'
   steps:
-    - name: Clone host build-tools
+    # Generic AOSP host tools (nproc, awk, bc, etc.) — referenced by
+    # build/build-tools/path/linux-x86/* symlinks inside the kernel/build repo
+    - name: Clone platform/prebuilts/build-tools
+      shell: bash
+      run: |
+        git clone https://android.googlesource.com/platform/prebuilts/build-tools \
+          -b "${{ inputs.toolchain_branch }}" --depth=1 prebuilts/build-tools
+
+    # Kernel-specific host tools (pahole, etc.)
+    - name: Clone kernel/prebuilts/build-tools
       shell: bash
       run: |
         git clone https://android.googlesource.com/kernel/prebuilts/build-tools \
-          -b master-kernel-build-2021 --depth=1 prebuilts/build-tools
+          -b "${{ inputs.toolchain_branch }}" --depth=1 prebuilts/kernel-build-tools
+
+    # mkbootimg — needed to assemble boot.img
+    - name: Clone mkbootimg
+      shell: bash
+      run: |
+        git clone https://android.googlesource.com/platform/system/tools/mkbootimg \
+          -b "${{ inputs.toolchain_branch }}" --depth=1 tools/mkbootimg
 
     - name: Cache Clang toolchain
       id: clang-cache
       uses: actions/cache@v4
       with:
-        path: prebuilts/clang/host/linux-x86/${{ inputs.clang_version }}
-        key: clang-${{ inputs.clang_version }}-${{ inputs.clang_ref }}
+        path: prebuilts-master/clang/host/linux-x86/${{ inputs.clang_version }}
+        key: clang-${{ inputs.clang_version }}-${{ inputs.toolchain_branch }}
 
     - name: Download Clang prebuilt (archive, not full history)
       if: steps.clang-cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        mkdir -p "prebuilts/clang/host/linux-x86/${{ inputs.clang_version }}"
-        curl -L "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/${{ inputs.clang_ref }}/${{ inputs.clang_version }}.tar.gz" \
+        mkdir -p "prebuilts-master/clang/host/linux-x86/${{ inputs.clang_version }}"
+        curl -L "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/${{ inputs.toolchain_branch }}/${{ inputs.clang_version }}.tar.gz" \
           -o clang.tar.gz
-        tar -xzf clang.tar.gz -C "prebuilts/clang/host/linux-x86/${{ inputs.clang_version }}"
+        tar -xzf clang.tar.gz -C "prebuilts-master/clang/host/linux-x86/${{ inputs.clang_version }}"
         rm clang.tar.gz
 
-    - name: Make Clang binaries executable
+    - name: Make prebuilt binaries executable
       shell: bash
-      run: chmod +x "prebuilts/clang/host/linux-x86/${{ inputs.clang_version }}/bin/"* || true
+      run: |
+        chmod +x "prebuilts-master/clang/host/linux-x86/${{ inputs.clang_version }}/bin/"* || true
+        find prebuilts/build-tools prebuilts/kernel-build-tools tools/mkbootimg -type f -exec chmod +x {} \; 2>/dev/null || true

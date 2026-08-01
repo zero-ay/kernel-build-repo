@@ -7,8 +7,11 @@ on:
         description: 'kernel/common branch/tag to build'
         required: false
         default: 'android12-5.10'
-      build_branch:
-        description: 'kernel/build branch (matches the manifest default revision for kernel_branch)'
+      manifest_branch:
+        description: >
+          Manifest default revision for kernel_branch — shared by kernel/build,
+          prebuilt build-tools, mkbootimg, and Clang. Check the kernel_branch's
+          manifest default.xml <default revision="..."> if you change kernel_branch.
         required: false
         default: 'master-kernel-build-2021'
       build_config:
@@ -20,13 +23,9 @@ on:
         required: false
         default: 'thin'
       clang_version:
-        description: 'Clang prebuilt version (folder name under clang/host/linux-x86)'
+        description: 'Clang prebuilt version (folder name under prebuilts-master/clang/host/linux-x86)'
         required: false
         default: 'clang-r416183b'
-      clang_ref:
-        description: 'Git ref on platform/prebuilts/clang/host/linux-x86 that contains clang_version'
-        required: false
-        default: 'master-kernel-build-2021'
       ksu_ref:
         description: 'KernelSU-Next tag/commit to check out (leave empty for latest tag)'
         required: false
@@ -39,11 +38,10 @@ on:
 
 env:
   KERNEL_BRANCH: ${{ github.event.inputs.kernel_branch || 'android12-5.10' }}
-  BUILD_BRANCH: ${{ github.event.inputs.build_branch || 'master-kernel-build-2021' }}
+  MANIFEST_BRANCH: ${{ github.event.inputs.manifest_branch || 'master-kernel-build-2021' }}
   BUILD_CONFIG: ${{ github.event.inputs.build_config || 'common/build.config.gki.aarch64' }}
   LTO: ${{ github.event.inputs.lto || 'thin' }}
   CLANG_VERSION: ${{ github.event.inputs.clang_version || 'clang-r416183b' }}
-  CLANG_REF: ${{ github.event.inputs.clang_ref || 'master-kernel-build-2021' }}
   KSU_REF: ${{ github.event.inputs.ksu_ref || '' }}
 
 jobs:
@@ -63,7 +61,7 @@ jobs:
         uses: ./.github/actions/clone-kernel-source
         with:
           kernel_branch: ${{ env.KERNEL_BRANCH }}
-          build_branch: ${{ env.BUILD_BRANCH }}
+          build_branch: ${{ env.MANIFEST_BRANCH }}
 
       - name: Setup KernelSU-Next
         uses: ./.github/actions/setup-kernelsu
@@ -74,7 +72,7 @@ jobs:
         uses: ./.github/actions/setup-toolchain
         with:
           clang_version: ${{ env.CLANG_VERSION }}
-          clang_ref: ${{ env.CLANG_REF }}
+          toolchain_branch: ${{ env.MANIFEST_BRANCH }}
 
       - name: Build kernel
         id: build
