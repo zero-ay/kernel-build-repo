@@ -1,15 +1,11 @@
 name: 'Setup KernelSU-Next'
-description: 'Integrates KernelSU-Next into the kernel source and enables CONFIG_KSU'
+description: 'Integrates KernelSU-Next into the kernel source (CONFIG_KSU is enabled by its Kconfig default)'
 
 inputs:
   ksu_ref:
     description: 'KernelSU-Next tag/commit to check out (empty = latest tag)'
     required: false
     default: ''
-  defconfig_path:
-    description: 'Path to the defconfig to enable CONFIG_KSU in'
-    required: false
-    default: 'common/arch/arm64/configs/gki_defconfig'
 
 runs:
   using: 'composite'
@@ -23,12 +19,8 @@ runs:
           curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -
         fi
 
-    - name: Enable CONFIG_KSU in defconfig
-      shell: bash
-      run: |
-        DEFCONFIG="${{ inputs.defconfig_path }}"
-        if [ -f "${DEFCONFIG}" ]; then
-          grep -q "^CONFIG_KSU=y" "${DEFCONFIG}" || echo "CONFIG_KSU=y" >> "${DEFCONFIG}"
-        else
-          echo "[WARN] ${DEFCONFIG} not found — add CONFIG_KSU=y to your defconfig manually."
-        fi
+    # Do NOT append CONFIG_KSU=y to the defconfig: drivers/kernelsu/Kconfig
+    # defines it as `tristate ... default y`, so it is already enabled and
+    # savedefconfig omits defaulted symbols — an explicit line breaks the
+    # GKI check_defconfig ("savedefconfig does not match gki_defconfig").
+
