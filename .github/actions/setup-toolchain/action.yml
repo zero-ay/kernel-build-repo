@@ -35,6 +35,16 @@ runs:
         git clone https://android.googlesource.com/platform/system/tools/mkbootimg \
           -b "${{ inputs.toolchain_branch }}" --depth=1 tools/mkbootimg
 
+    # Hermetic host sysroot (glibc headers/libs for host tools). Required by
+    # HERMETIC_TOOLCHAIN=1: build/build-tools/sysroot is a symlink to
+    # prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8/sysroot
+    - name: Clone gcc host prebuilt (hermetic sysroot)
+      shell: bash
+      run: |
+        git clone https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8 \
+          -b "${{ inputs.toolchain_branch }}" --depth=1 \
+          prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8
+
     - name: Cache Clang toolchain
       id: clang-cache
       uses: actions/cache@v4
@@ -56,4 +66,4 @@ runs:
       shell: bash
       run: |
         chmod +x "prebuilts-master/clang/host/linux-x86/${{ inputs.clang_version }}/bin/"* || true
-        find prebuilts/build-tools prebuilts/kernel-build-tools tools/mkbootimg -type f -exec chmod +x {} \; 2>/dev/null || true
+        find prebuilts/build-tools prebuilts/kernel-build-tools prebuilts/gcc tools/mkbootimg -type f -exec chmod +x {} \; 2>/dev/null || true

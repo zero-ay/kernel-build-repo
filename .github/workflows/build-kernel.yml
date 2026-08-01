@@ -46,9 +46,8 @@ env:
 
 jobs:
   build:
-    # Pin to 22.04: the 2021-era prebuilt clang (e.g. clang-r416183b) fails
-    # to find glibc headers ('sys/types.h' not found) on ubuntu-24.04/latest
-    # because its GCC detection misses the multiarch include dir.
+    # 22.04 is the best-tested host for the 2021-era prebuilt toolchain
+    # (clang-r416183b, gcc-4.8 hermetic sysroot prebuilts).
     runs-on: ubuntu-22.04
     timeout-minutes: 120
 
