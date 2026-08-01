@@ -18,6 +18,14 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    # Strip the '-dirty' suffix from the kernel release string: the build
+    # tree has uncommitted changes (KernelSU-Next), so setlocalversion would
+    # otherwise append '-dirty' (e.g. 5.10.223-android12-9-gXXXX-dirty).
+    - name: Remove -dirty from kernel release string
+      shell: bash
+      run: |
+        sed -i "s/printf '%s' -dirty/printf '%s' ''/g" common/scripts/setlocalversion
+
     - name: Run build.sh
       shell: bash
       run: LTO=${{ inputs.lto }} BUILD_CONFIG="${{ inputs.build_config }}" build/build.sh

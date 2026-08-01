@@ -10,7 +10,8 @@ on:
       manifest_branch:
         description: >
           Manifest default revision for kernel_branch — shared by kernel/build,
-          prebuilt build-tools, mkbootimg, and Clang. Check the kernel_branch's
+          prebuilt build-tools, mkbootimg, and the gcc hermetic sysroot.
+          Clang comes separately from clang_ref. Check the kernel_branch's
           manifest default.xml <default revision="..."> if you change kernel_branch.
         required: false
         default: 'master-kernel-build-2021'
@@ -25,7 +26,11 @@ on:
       clang_version:
         description: 'Clang prebuilt version (folder name under prebuilts-master/clang/host/linux-x86)'
         required: false
-        default: 'clang-r416183b'
+        default: 'clang-r547379'
+      clang_ref:
+        description: 'Branch/ref on platform/prebuilts/clang/host/linux-x86 that contains clang_version'
+        required: false
+        default: 'main'
       ksu_ref:
         description: 'KernelSU-Next tag/commit to check out (leave empty for latest tag)'
         required: false
@@ -41,7 +46,8 @@ env:
   MANIFEST_BRANCH: ${{ github.event.inputs.manifest_branch || 'master-kernel-build-2021' }}
   BUILD_CONFIG: ${{ github.event.inputs.build_config || 'common/build.config.gki.aarch64' }}
   LTO: ${{ github.event.inputs.lto || 'thin' }}
-  CLANG_VERSION: ${{ github.event.inputs.clang_version || 'clang-r416183b' }}
+  CLANG_VERSION: ${{ github.event.inputs.clang_version || 'clang-r547379' }}
+  CLANG_REF: ${{ github.event.inputs.clang_ref || 'main' }}
   KSU_REF: ${{ github.event.inputs.ksu_ref || '' }}
 
 jobs:
@@ -74,6 +80,7 @@ jobs:
         uses: ./.github/actions/setup-toolchain
         with:
           clang_version: ${{ env.CLANG_VERSION }}
+          clang_ref: ${{ env.CLANG_REF }}
           toolchain_branch: ${{ env.MANIFEST_BRANCH }}
 
       - name: Build kernel
@@ -88,6 +95,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kernel-${{ env.KERNEL_BRANCH }}-${{ github.run_number }}
-          path: ${{ steps.build.outputs.dist_dir }}
+          path: ${{ steps.build.outputs.dist_dir }}/Image*
           if-no-files-found: warn
           retention-days: 14
