@@ -16,7 +16,7 @@ runs:
       shell: bash
       run: |
         git clone https://android.googlesource.com/kernel/prebuilts/build-tools \
-          -b main-kernel --depth=1 prebuilts/build-tools
+          -b master-kernel-build-2021 --depth=1 prebuilts/build-tools
 
     - name: Cache Clang toolchain
       id: clang-cache

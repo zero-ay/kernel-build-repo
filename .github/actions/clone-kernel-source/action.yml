@@ -6,9 +6,9 @@ inputs:
     description: 'Branch/tag of kernel/common to clone (e.g. android12-5.10)'
     required: true
   build_branch:
-    description: 'Branch of kernel/build to clone — this is universal, not version-specific'
+    description: 'Branch of kernel/build to clone (matches the manifest default revision for this kernel_branch)'
     required: false
-    default: 'main-kernel'
+    default: 'master-kernel-build-2021'
 
 runs:
   using: 'composite'
