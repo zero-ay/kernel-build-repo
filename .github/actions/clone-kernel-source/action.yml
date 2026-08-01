@@ -1,0 +1,22 @@
+name: 'Clone Kernel Source'
+description: 'Clones kernel/common and kernel/build for the given branch'
+
+inputs:
+  kernel_branch:
+    description: 'Branch/tag of kernel/common and kernel/build to clone'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Clone kernel/common
+      shell: bash
+      run: |
+        git clone https://android.googlesource.com/kernel/common \
+          -b "${{ inputs.kernel_branch }}" --depth=1 common
+
+    - name: Clone kernel/build
+      shell: bash
+      run: |
+        git clone https://android.googlesource.com/kernel/build \
+          -b "${{ inputs.kernel_branch }}" --depth=1 build

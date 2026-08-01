@@ -1,0 +1,40 @@
+name: 'Setup Toolchain'
+description: 'Clones host build-tools and downloads the Clang prebuilt (cached)'
+
+inputs:
+  clang_version:
+    description: 'Clang prebuilt folder name (e.g. clang-r416183b)'
+    required: true
+  clang_ref:
+    description: 'Git ref on platform/prebuilts/clang/host/linux-x86 containing clang_version'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Clone host build-tools
+      shell: bash
+      run: |
+        git clone https://android.googlesource.com/kernel/prebuilts/build-tools \
+          --depth=1 prebuilts/build-tools
+
+    - name: Cache Clang toolchain
+      id: clang-cache
+      uses: actions/cache@v4
+      with:
+        path: prebuilts/clang/host/linux-x86/${{ inputs.clang_version }}
+        key: clang-${{ inputs.clang_version }}-${{ inputs.clang_ref }}
+
+    - name: Download Clang prebuilt (archive, not full history)
+      if: steps.clang-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        mkdir -p "prebuilts/clang/host/linux-x86/${{ inputs.clang_version }}"
+        curl -L "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/${{ inputs.clang_ref }}/${{ inputs.clang_version }}.tar.gz" \
+          -o clang.tar.gz
+        tar -xzf clang.tar.gz -C "prebuilts/clang/host/linux-x86/${{ inputs.clang_version }}"
+        rm clang.tar.gz
+
+    - name: Make Clang binaries executable
+      shell: bash
+      run: chmod +x "prebuilts/clang/host/linux-x86/${{ inputs.clang_version }}/bin/"* || true

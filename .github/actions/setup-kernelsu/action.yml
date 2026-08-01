@@ -1,0 +1,34 @@
+name: 'Setup KernelSU-Next'
+description: 'Integrates KernelSU-Next into the kernel source and enables CONFIG_KSU'
+
+inputs:
+  ksu_ref:
+    description: 'KernelSU-Next tag/commit to check out (empty = latest tag)'
+    required: false
+    default: ''
+  defconfig_path:
+    description: 'Path to the defconfig to enable CONFIG_KSU in'
+    required: false
+    default: 'common/arch/arm64/configs/gki_defconfig'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run official KernelSU-Next setup script
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.ksu_ref }}" ]; then
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s "${{ inputs.ksu_ref }}"
+        else
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -
+        fi
+
+    - name: Enable CONFIG_KSU in defconfig
+      shell: bash
+      run: |
+        DEFCONFIG="${{ inputs.defconfig_path }}"
+        if [ -f "${DEFCONFIG}" ]; then
+          grep -q "^CONFIG_KSU=y" "${DEFCONFIG}" || echo "CONFIG_KSU=y" >> "${DEFCONFIG}"
+        else
+          echo "[WARN] ${DEFCONFIG} not found — add CONFIG_KSU=y to your defconfig manually."
+        fi
