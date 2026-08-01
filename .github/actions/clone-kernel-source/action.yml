@@ -1,10 +1,14 @@
 name: 'Clone Kernel Source'
-description: 'Clones kernel/common and kernel/build for the given branch'
+description: 'Clones kernel/common (version-specific) and kernel/build (universal build scripts)'
 
 inputs:
   kernel_branch:
-    description: 'Branch/tag of kernel/common and kernel/build to clone'
+    description: 'Branch/tag of kernel/common to clone (e.g. android12-5.10)'
     required: true
+  build_branch:
+    description: 'Branch of kernel/build to clone — this is universal, not version-specific'
+    required: false
+    default: 'main-kernel'
 
 runs:
   using: 'composite'
@@ -19,4 +23,4 @@ runs:
       shell: bash
       run: |
         git clone https://android.googlesource.com/kernel/build \
-          -b "${{ inputs.kernel_branch }}" --depth=1 build
+          -b "${{ inputs.build_branch }}" --depth=1 build

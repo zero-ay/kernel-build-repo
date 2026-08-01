@@ -7,6 +7,10 @@ on:
         description: 'kernel/common branch/tag to build'
         required: false
         default: 'android12-5.10'
+      build_branch:
+        description: 'kernel/build branch (universal, not version-specific)'
+        required: false
+        default: 'main-kernel'
       build_config:
         description: 'Build config file to use (relative to workspace root)'
         required: false
@@ -35,6 +39,7 @@ on:
 
 env:
   KERNEL_BRANCH: ${{ github.event.inputs.kernel_branch || 'android12-5.10' }}
+  BUILD_BRANCH: ${{ github.event.inputs.build_branch || 'main-kernel' }}
   BUILD_CONFIG: ${{ github.event.inputs.build_config || 'common/build.config.gki.aarch64' }}
   LTO: ${{ github.event.inputs.lto || 'thin' }}
   CLANG_VERSION: ${{ github.event.inputs.clang_version || 'clang-r416183b' }}
@@ -58,6 +63,7 @@ jobs:
         uses: ./.github/actions/clone-kernel-source
         with:
           kernel_branch: ${{ env.KERNEL_BRANCH }}
+          build_branch: ${{ env.BUILD_BRANCH }}
 
       - name: Setup KernelSU-Next
         uses: ./.github/actions/setup-kernelsu
