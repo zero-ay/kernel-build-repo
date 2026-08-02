@@ -26,12 +26,14 @@ runs:
       run: |
         sed -i "s/printf '%s' -dirty/printf '%s' ''/g" common/scripts/setlocalversion
 
-    # KernelSU changes kernel internals, so GKI KMI/ABI compliance no longer
-    # holds: disable the strict KMI symbol comparison (otherwise the build
-    # fails on e.g. __stack_chk_guard missing from ksymtab with newer clang).
+    # GKI KMI/ABI check stays enabled: build.config.gki.aarch64 defaults
+    # KMI_SYMBOL_LIST_STRICT_MODE to 1 (1-1 match of the KMI symbol list against
+    # the built vmlinux). This passes with the manifest-era clang
+    # (clang-r416183b); newer clangs (e.g. clang-r547379) drop __stack_chk_guard
+    # from ksymtab and break the check, so keep clang_version on the era toolchain.
     - name: Run build.sh
       shell: bash
-      run: KMI_SYMBOL_LIST_STRICT_MODE=0 LTO=${{ inputs.lto }} BUILD_CONFIG="${{ inputs.build_config }}" build/build.sh
+      run: LTO=${{ inputs.lto }} BUILD_CONFIG="${{ inputs.build_config }}" build/build.sh
 
     - name: Locate build output
       id: dist

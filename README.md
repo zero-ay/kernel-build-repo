@@ -42,8 +42,8 @@ self-contained, reusable unit with its own inputs. The main workflow
 | `manifest_branch` | `master-kernel-build-2021` | Manifest default revision shared by `kernel/build`, prebuilt build-tools, mkbootimg, and the gcc hermetic sysroot |
 | `build_config` | `common/build.config.gki.aarch64` | Build config to build |
 | `lto` | `thin` | LTO mode: `thin` \| `full` \| `none` |
-| `clang_version` | `clang-r547379` | Clang prebuilt folder name (latest on the clang repo's `main`) |
-| `clang_ref` | `main` | Branch/ref on `platform/prebuilts/clang/host/linux-x86` that contains `clang_version` |
+| `clang_version` | `clang-r416183b` | Clang prebuilt folder name — the android12-5.10 manifest-era toolchain. Keep it on the era clang: newer clangs (e.g. `clang-r547379`) drop `__stack_chk_guard` from ksymtab and fail the KMI check |
+| `clang_ref` | `master-kernel-build-2021` | Branch/ref on `platform/prebuilts/clang/host/linux-x86` that contains `clang_version` (the era clang lives on `master-kernel-build-2021`) |
 | `ksu_ref` | `v3.3.0` | KernelSU-Next tag/commit to check out. Must match the version the SUSFS patch in `patches/susfs/` was adapted for; bumping it requires re-basing that patch. |
 
 If you switch `kernel_branch`, also update `manifest_branch` to that branch's
@@ -69,9 +69,12 @@ Artifacts are kept for 14 days.
 - **Release string:** the `-dirty` suffix is stripped from `setlocalversion`
   (the tree has uncommitted KernelSU-Next changes), e.g.
   `5.10.223-android12-9-g<sha>`.
-- **KMI/ABI check:** strict KMI symbol comparison is disabled
-  (`KMI_SYMBOL_LIST_STRICT_MODE=0`) — KernelSU modifies kernel internals, so
-  the build intentionally does not preserve the GKI ABI.
+- **KMI/ABI check:** enabled. `build.config.gki.aarch64` defaults
+  `KMI_SYMBOL_LIST_STRICT_MODE` to 1 (1-1 match of the KMI symbol list against
+  the built vmlinux), and the build passes with the manifest-era clang.
+  KernelSU-Next/SUSFS do not conflict with the GKI KMI; the earlier KMI failure
+  was caused by building with a much newer clang (`clang-r547379`), which
+  changed symbol emission (e.g. `__stack_chk_guard` missing from ksymtab).
 
 ## Trigger
 

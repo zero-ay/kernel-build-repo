@@ -26,11 +26,11 @@ on:
       clang_version:
         description: 'Clang prebuilt version (folder name under prebuilts-master/clang/host/linux-x86)'
         required: false
-        default: 'clang-r547379'
+        default: 'clang-r416183b'
       clang_ref:
-        description: 'Branch/ref on platform/prebuilts/clang/host/linux-x86 that contains clang_version'
+        description: 'Branch/ref on platform/prebuilts/clang/host/linux-x86 that contains clang_version (the android12-5.10 era clang lives on master-kernel-build-2021)'
         required: false
-        default: 'main'
+        default: 'master-kernel-build-2021'
       ksu_ref:
         description: 'KernelSU-Next tag/commit to check out (must be the version the SUSFS patch was adapted for — see patches/susfs/)'
         required: false
@@ -41,8 +41,8 @@ env:
   MANIFEST_BRANCH: ${{ github.event.inputs.manifest_branch || 'master-kernel-build-2021' }}
   BUILD_CONFIG: ${{ github.event.inputs.build_config || 'common/build.config.gki.aarch64' }}
   LTO: ${{ github.event.inputs.lto || 'thin' }}
-  CLANG_VERSION: ${{ github.event.inputs.clang_version || 'clang-r547379' }}
-  CLANG_REF: ${{ github.event.inputs.clang_ref || 'main' }}
+  CLANG_VERSION: ${{ github.event.inputs.clang_version || 'clang-r416183b' }}
+  CLANG_REF: ${{ github.event.inputs.clang_ref || 'master-kernel-build-2021' }}
   KSU_REF: ${{ github.event.inputs.ksu_ref || 'v3.3.0' }}
 
 jobs:
