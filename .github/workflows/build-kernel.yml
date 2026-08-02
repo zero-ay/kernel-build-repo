@@ -32,9 +32,9 @@ on:
         required: false
         default: 'main'
       ksu_ref:
-        description: 'KernelSU-Next tag/commit to check out (leave empty for latest tag)'
+        description: 'KernelSU-Next tag/commit to check out (must be the version the SUSFS patch was adapted for — see patches/susfs/)'
         required: false
-        default: ''
+        default: 'v3.3.0'
 
 env:
   KERNEL_BRANCH: ${{ github.event.inputs.kernel_branch || 'android12-5.10' }}
@@ -43,7 +43,7 @@ env:
   LTO: ${{ github.event.inputs.lto || 'thin' }}
   CLANG_VERSION: ${{ github.event.inputs.clang_version || 'clang-r547379' }}
   CLANG_REF: ${{ github.event.inputs.clang_ref || 'main' }}
-  KSU_REF: ${{ github.event.inputs.ksu_ref || '' }}
+  KSU_REF: ${{ github.event.inputs.ksu_ref || 'v3.3.0' }}
 
 jobs:
   build:
@@ -68,6 +68,11 @@ jobs:
 
       - name: Setup KernelSU-Next
         uses: ./.github/actions/setup-kernelsu
+        with:
+          ksu_ref: ${{ env.KSU_REF }}
+
+      - name: Setup SUSFS (patches for KernelSU-Next)
+        uses: ./.github/actions/setup-susfs
         with:
           ksu_ref: ${{ env.KSU_REF }}
 

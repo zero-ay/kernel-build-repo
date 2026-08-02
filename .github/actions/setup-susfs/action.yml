@@ -1,0 +1,44 @@
+name: 'Setup SUSFS (KernelSU-Next)'
+description: >
+  Integrates SUSFS (susfs4ksu, gki-android12-5.10) into the kernel and into the
+  KernelSU-Next module tree. The committed patches (patches/susfs/) are pinned:
+  10_enable_susfs_for_ksu.patch is the upstream patch adapted for KernelSU-Next
+  v3.3.0's kernel tree (upstream's version targets official KernelSU main and
+  does not apply to KernelSU-Next).
+
+inputs:
+  ksu_ref:
+    description: 'KernelSU-Next tag/commit the 10_enable patch was adapted against (must match the ksu_ref used by setup-kernelsu)'
+    required: false
+    default: 'v3.3.0'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Copy SUSFS kernel-side files into common/
+      shell: bash
+      run: |
+        set -e
+        cp "${{ github.workspace }}/patches/susfs/fs/susfs.c" common/fs/susfs.c
+        cp "${{ github.workspace }}/patches/susfs/include/linux/susfs.h" common/include/linux/susfs.h
+        cp "${{ github.workspace }}/patches/susfs/include/linux/susfs_def.h" common/include/linux/susfs_def.h
+        cp "${{ github.workspace }}/patches/susfs/50_add_susfs_in_gki-android12-5.10.patch" common/
+
+    - name: Apply SUSFS kernel patch in common/
+      shell: bash
+      working-directory: common
+      run: |
+        set -e
+        patch -p1 -F2 < 50_add_susfs_in_gki-android12-5.10.patch
+        rm 50_add_susfs_in_gki-android12-5.10.patch
+
+    - name: Apply SUSFS KernelSU patch in KernelSU-Next repo
+      shell: bash
+      working-directory: KernelSU-Next
+      run: |
+        set -e
+        if [ "$(git describe --tags --exact-match 2>/dev/null || echo '')" != "${{ inputs.ksu_ref }}" ]; then
+          echo "::warning::KernelSU-Next checkout ($(git describe --tags --exact-match 2>/dev/null || echo 'not a tag')) does not match ksu_ref (${{ inputs.ksu_ref }})."
+          echo "::warning::The SUSFS patch was adapted for KernelSU-Next ${{ inputs.ksu_ref }} and may fail to apply."
+        fi
+        patch -p1 -F2 < "${{ github.workspace }}/patches/susfs/10_enable_susfs_for_ksu.patch"
