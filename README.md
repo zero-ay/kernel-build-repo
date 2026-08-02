@@ -4,7 +4,8 @@ Builds the Android Common Kernel via GitHub Actions, integrating KernelSU-Next,
 and packages the result into a **flashable AnyKernel3 zip**. Kernel source,
 build scripts, and toolchain are all cloned fresh on the runner each run — no
 `repo init`/`repo sync`, and the only things committed to this repo are the
-workflow, its composite actions, and the AnyKernel3 template.
+workflow, its composite actions, the SUSFS patchset (`patches/susfs/`), and the
+AnyKernel3 template.
 
 ## Structure
 
@@ -15,11 +16,13 @@ workflow, its composite actions, and the AnyKernel3 template.
 │   │   └── build-kernel.yml           # orchestrates the whole build
 │   └── actions/
 │       ├── install-deps/              # host packages (apt)
-│       ├── clone-kernel-source/       # kernel/common (version-specific) + kernel/build
+│       ├── clone-kernel-source/       # kernel/common (kernel_branch input) + kernel/build @ master-kernel-build-2021 (the branch that ships build.sh)
 │       ├── setup-kernelsu/            # KernelSU-Next integration (CONFIG_KSU via its Kconfig default)
-│       ├── setup-susfs/               # SUSFS root-hiding patchset (patches/susfs/), adapted for KernelSU-Next
-│       ├── setup-toolchain/           # prebuilts: build-tools, mkbootimg, gcc hermetic sysroot, Clang
-│       └── build-kernel/              # strips -dirty, runs build.sh, locates dist/
+│       ├── setup-susfs/               # applies the SUSFS patchset (patches/susfs/) to kernel + KernelSU-Next
+│       ├── setup-toolchain/           # toolchain mirroring the official android12-5.10 manifest: shallow clones @ master-kernel-build-2021, clang-r416183b
+│       └── build-kernel/              # strips -dirty, runs the pinned build.sh command, locates dist/
+├── patches/
+│   └── susfs/                         # SUSFS patchset adapted for KernelSU-Next v3.3.0: 10_enable + 50_add patches, fs/susfs.c, include/linux/susfs*.h
 └── kernel-zipping/                    # AnyKernel3 flashable zip template
 ```
 
