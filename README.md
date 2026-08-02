@@ -106,9 +106,11 @@ detail.
 - **Applied by:** the `setup-bbrv3` action (`patch -p1 -F2` on the freshly
   cloned `common/`), immediately after SUSFS.
 - **Enablement:** `arch/arm64/configs/gki_defconfig` gets
-  `CONFIG_TCP_CONG_ADVANCED=y` and `CONFIG_TCP_CONG_BBR=y` (both round-trip
-  through `savedefconfig`, so `check_defconfig` is unaffected). The default CC
-  stays CUBIC — BBRv3 is *selectable*, not the default.
+  `CONFIG_TCP_CONG_ADVANCED=y` and `CONFIG_TCP_CONG_BBR=y`, plus
+  `# CONFIG_TCP_CONG_BIC/HTCP/WESTWOOD is not set` to keep GKI's loadable-module
+  list empty. All lines round-trip through `savedefconfig`, so `check_defconfig`
+  is unaffected. The default CC stays CUBIC — BBRv3 is *selectable*, not the
+  default.
 - **Use after flashing:** `sysctl -w net.ipv4.tcp_congestion_control=bbr`
   (or `ip route ... congestion_control bbr`).
 - **Compatibility:** new exports are kept out of the KMI (`TRIM_NONLISTED_KMI`

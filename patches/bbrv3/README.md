@@ -58,8 +58,12 @@ The bbr repo's `v3` branch changes these files vs. mainline 6.13.7:
 - **Defconfig:** android12‑5.10's `gki_defconfig` explicitly sets
   `# CONFIG_TCP_CONG_ADVANCED is not set`, which hides every advanced CC
   including BBR. The patch edits `arch/arm64/configs/gki_defconfig` to set
-  `CONFIG_TCP_CONG_ADVANCED=y` and `CONFIG_TCP_CONG_BBR=y`. Both round‑trip
-  through `scripts/savedefconfig`, so Android's `check_defconfig` still passes.
+  `CONFIG_TCP_CONG_ADVANCED=y` and `CONFIG_TCP_CONG_BBR=y`, and to keep the GKI
+  loadable‑module list empty it also sets `# CONFIG_TCP_CONG_BIC/HTCP/
+  WESTWOOD is not set` (those three default to `=m` with ADVANCED enabled and
+  would otherwise trip the build's "modules list out of date" check). All
+  lines round‑trip through `scripts/savedefconfig`, so Android's
+  `check_defconfig` still passes.
 - **Default CC stays CUBIC** (`CONFIG_DEFAULT_TCP_CONG="cubic"`). BBRv3 becomes
   *selectable*, not the default.
 - **KMI:** new `EXPORT_SYMBOL_GPL`s (the 3 `tcp_plb_*`) are trimmed by the
