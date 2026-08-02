@@ -40,8 +40,6 @@ self-contained, reusable unit with its own inputs. The main workflow
 |---|---|---|
 | `kernel_branch` | `android12-5.10` | Branch/tag of `kernel/common` to build |
 | `manifest_branch` | `master-kernel-build-2021` | Manifest default revision shared by `kernel/build`, prebuilt build-tools, mkbootimg, and the gcc hermetic sysroot |
-| `build_config` | `common/build.config.gki.aarch64` | Build config to build |
-| `lto` | `thin` | LTO mode: `thin` \| `full` \| `none` |
 | `clang_version` | `clang-r416183b` | Clang prebuilt folder name — the android12-5.10 manifest-era toolchain. Keep it on the era clang: newer clangs (e.g. `clang-r547379`) drop `__stack_chk_guard` from ksymtab and fail the KMI check |
 | `clang_ref` | `master-kernel-build-2021` | Branch/ref on `platform/prebuilts/clang/host/linux-x86` that contains `clang_version` (the era clang lives on `master-kernel-build-2021`) |
 | `ksu_ref` | `v3.3.0` | KernelSU-Next tag/commit to check out. Must match the version the SUSFS patch in `patches/susfs/` was adapted for; bumping it requires re-basing that patch. |

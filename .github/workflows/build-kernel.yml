@@ -15,14 +15,6 @@ on:
           manifest default.xml <default revision="..."> if you change kernel_branch.
         required: false
         default: 'master-kernel-build-2021'
-      build_config:
-        description: 'Build config file to use (relative to workspace root)'
-        required: false
-        default: 'common/build.config.gki.aarch64'
-      lto:
-        description: 'LTO mode: thin | full | none'
-        required: false
-        default: 'thin'
       clang_version:
         description: 'Clang prebuilt version (folder name under prebuilts-master/clang/host/linux-x86)'
         required: false
@@ -39,8 +31,6 @@ on:
 env:
   KERNEL_BRANCH: ${{ github.event.inputs.kernel_branch || 'android12-5.10' }}
   MANIFEST_BRANCH: ${{ github.event.inputs.manifest_branch || 'master-kernel-build-2021' }}
-  BUILD_CONFIG: ${{ github.event.inputs.build_config || 'common/build.config.gki.aarch64' }}
-  LTO: ${{ github.event.inputs.lto || 'thin' }}
   CLANG_VERSION: ${{ github.event.inputs.clang_version || 'clang-r416183b' }}
   CLANG_REF: ${{ github.event.inputs.clang_ref || 'master-kernel-build-2021' }}
   KSU_REF: ${{ github.event.inputs.ksu_ref || 'v3.3.0' }}
@@ -86,9 +76,6 @@ jobs:
       - name: Build kernel
         id: build
         uses: ./.github/actions/build-kernel
-        with:
-          build_config: ${{ env.BUILD_CONFIG }}
-          lto: ${{ env.LTO }}
 
       # Drop the built kernel into the AnyKernel3 flashable template
       # (kernel-zipping/). Upload the package *contents* (not a nested zip):
