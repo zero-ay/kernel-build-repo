@@ -46,6 +46,9 @@ jobs:
         with:
           ksu_ref: ${{ env.KSU_REF }}
 
+      - name: Setup TCP BBR v3
+        uses: ./.github/actions/setup-bbrv3
+
       - name: Setup toolchain
         uses: ./.github/actions/setup-toolchain
 

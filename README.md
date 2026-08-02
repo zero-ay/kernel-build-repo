@@ -19,10 +19,12 @@ AnyKernel3 template.
 │       ├── clone-kernel-source/       # kernel/common (kernel_branch input) + kernel/build @ master-kernel-build-2021 (the branch that ships build.sh)
 │       ├── setup-kernelsu/            # KernelSU-Next integration (CONFIG_KSU via its Kconfig default)
 │       ├── setup-susfs/               # applies the SUSFS patchset (patches/susfs/) to kernel + KernelSU-Next
+│       ├── setup-bbrv3/               # applies the TCP BBR v3 port (patches/bbrv3/) to common/
 │       ├── setup-toolchain/           # toolchain mirroring the official android12-5.10 manifest: shallow clones @ master-kernel-build-2021, clang-r416183b
 │       └── build-kernel/              # strips -dirty, runs the pinned build.sh command, locates dist/
 ├── patches/
-│   └── susfs/                         # SUSFS patchset adapted for KernelSU-Next v3.3.0: 10_enable + 50_add patches, fs/susfs.c, include/linux/susfs*.h
+│   ├── susfs/                         # SUSFS patchset adapted for KernelSU-Next v3.3.0: 10_enable + 50_add patches, fs/susfs.c, include/linux/susfs*.h
+│   └── bbrv3/                         # TCP BBR v3 port (github.com/google/bbr @ v3) for the common kernel
 └── kernel-zipping/                    # AnyKernel3 flashable zip template
 ```
 
@@ -92,6 +94,25 @@ automatic triggers (no push/schedule), so pushes to `main` won't start a build.
   step/composite action that applies them after cloning `common/`.
 - **Heavy/ongoing changes:** fork `kernel/common` to your own GitHub repo and
   point `clone-kernel-source` at it instead of Google's source.
+
+## TCP BBR v3
+
+The build integrates **TCP BBR v3** (Google's modularized `bbr` congestion
+control) into the common kernel — see `patches/bbrv3/README.md` for the full
+detail.
+
+- **Source:** `github.com/google/bbr`, branch `v3` (based on upstream Linux
+  6.13.7), backported to android12-5.10.
+- **Applied by:** the `setup-bbrv3` action (`patch -p1 -F2` on the freshly
+  cloned `common/`), immediately after SUSFS.
+- **Enablement:** `arch/arm64/configs/gki_defconfig` gets
+  `CONFIG_TCP_CONG_ADVANCED=y` and `CONFIG_TCP_CONG_BBR=y` (both round-trip
+  through `savedefconfig`, so `check_defconfig` is unaffected). The default CC
+  stays CUBIC — BBRv3 is *selectable*, not the default.
+- **Use after flashing:** `sysctl -w net.ipv4.tcp_congestion_control=bbr`
+  (or `ip route ... congestion_control bbr`).
+- **Compatibility:** new exports are kept out of the KMI (`TRIM_NONLISTED_KMI`
+  trims the `tcp_plb_*` GPL exports), so the 1-1 KMI check is unaffected.
 
 ## SUSFS (root hiding)
 
