@@ -1,0 +1,26 @@
+name: 'Setup KernelSU-Next'
+description: 'Integrates KernelSU-Next into the kernel source (CONFIG_KSU is enabled by its Kconfig default)'
+
+inputs:
+  ksu_ref:
+    description: 'KernelSU-Next tag/commit to check out (empty = latest tag)'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run official KernelSU-Next setup script
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.ksu_ref }}" ]; then
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s "${{ inputs.ksu_ref }}"
+        else
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -
+        fi
+
+    # Do NOT append CONFIG_KSU=y to the defconfig: drivers/kernelsu/Kconfig
+    # defines it as `tristate ... default y`, so it is already enabled and
+    # savedefconfig omits defaulted symbols — an explicit line breaks the
+    # GKI check_defconfig ("savedefconfig does not match gki_defconfig").
+
