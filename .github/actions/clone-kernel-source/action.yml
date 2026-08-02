@@ -15,8 +15,14 @@ runs:
         git clone --depth=1 https://android.googlesource.com/kernel/common \
           -b "${{ inputs.kernel_branch }}" common
 
-    # Main build script — official Google kernel/build, deep history excluded.
+    # kernel/build — hosts build.sh (the build entry point). The official
+    # kernel/manifest (common-android12-5.10) pins it via its
+    # <default revision="master-kernel-build-2021">. That branch is the only
+    # one with the legacy build.sh that android12-5.10's build configs expect;
+    # newer branches (main-kernel, main) dropped it in favor of Kleaf/Bazel and
+    # have no build.sh at the root.
     - name: Clone kernel/build
       shell: bash
       run: |
-        git clone --depth=1 https://android.googlesource.com/kernel/build build
+        git clone --depth=1 -b master-kernel-build-2021 \
+          https://android.googlesource.com/kernel/build build

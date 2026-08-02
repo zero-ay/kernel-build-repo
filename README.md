@@ -43,9 +43,15 @@ self-contained, reusable unit with its own inputs. The main workflow
 
 Toolchain (`kernel/build`, `prebuilts/build-tools`, the AOSP clang repo, the gcc
 hermetic sysroot, mkbootimg) is cloned shallow (`--depth=1`) from the official
-Google repos on their default branches — see `setup-toolchain` and
-`clone-kernel-source`. The newest `clang-r*` folder in the clang clone is
-auto-linked to the path `build.config.common` expects.
+Google repos, mirroring the official `kernel/manifest`
+(`common-android12-5.10`) exactly: same paths and same
+`master-kernel-build-2021` revision (the manifest's `<default revision=...>`).
+That is the only `kernel/build` branch that still ships the legacy `build.sh`
+entry point — newer branches (`main-kernel`, `main`) dropped it in favor of
+Kleaf/Bazel. `common/build.config.common` pins `CLANG_PREBUILT_BIN` to
+`clang-r416183b`; `setup-toolchain` verifies that folder exists before
+building (fail-fast instead of a cryptic `build.sh: No such file or
+directory`).
 
 ## Output
 
@@ -66,9 +72,10 @@ Artifacts are kept for 14 days.
   `5.10.223-android12-9-g<sha>`.
 - **KMI/ABI check:** enabled. `build.config.gki.aarch64` defaults
   `KMI_SYMBOL_LIST_STRICT_MODE` to 1 (1-1 match of the KMI symbol list against
-  the built vmlinux). Note: some newer clangs drop `__stack_chk_guard` from
-  ksymtab, which fails this check; if the newest clang in the shallow clone
-  breaks it, point the toolchain at an older clang branch/folder.
+  the built vmlinux). The clang comes from the manifest's
+  `master-kernel-build-2021` branch (`clang-r416183b`), which passes this
+  check; some much newer clangs (e.g. `clang-r547379`) drop `__stack_chk_guard`
+  from ksymtab and fail it, so keep the toolchain on the manifest revision.
 
 ## Trigger
 
