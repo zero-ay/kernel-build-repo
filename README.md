@@ -1,58 +1,81 @@
 # Auto Kernel Builder (android12-5.10 + KernelSU-Next)
 
-Builds the Android Common Kernel via GitHub Actions, integrating KernelSU-Next.
-Source, build scripts, and toolchain are all cloned fresh on the runner each
-run — no `repo init`/`repo sync`, and nothing is committed to this repo except
-the workflow itself.
+Builds the Android Common Kernel via GitHub Actions, integrating KernelSU-Next,
+and packages the result into a **flashable AnyKernel3 zip**. Kernel source,
+build scripts, and toolchain are all cloned fresh on the runner each run — no
+`repo init`/`repo sync`, and the only things committed to this repo are the
+workflow, its composite actions, and the AnyKernel3 template.
 
 ## Structure
 
 ```
-.github/
-├── workflows/
-│   └── build-kernel.yml           # orchestrates the whole build
-└── actions/
-    ├── install-deps/              # host packages (apt)
-    ├── clone-kernel-source/       # kernel/common + kernel/build
-    ├── setup-kernelsu/            # KernelSU-Next integration + CONFIG_KSU
-    ├── setup-toolchain/           # build-tools + Clang (cached)
-    └── build-kernel/              # runs build.sh, locates dist/
+.
+├── .github/
+│   ├── workflows/
+│   │   └── build-kernel.yml           # orchestrates the whole build
+│   └── actions/
+│       ├── install-deps/              # host packages (apt)
+│       ├── clone-kernel-source/       # kernel/common (version-specific) + kernel/build
+│       ├── setup-kernelsu/            # KernelSU-Next integration (CONFIG_KSU via its Kconfig default)
+│       ├── setup-toolchain/           # prebuilts: build-tools, mkbootimg, gcc hermetic sysroot, Clang
+│       └── build-kernel/              # strips -dirty, runs build.sh, locates dist/
+└── kernel-zipping/                    # AnyKernel3 flashable zip template
 ```
 
 Each folder under `.github/actions/` is a **composite action** — a
 self-contained, reusable unit with its own inputs. The main workflow
-(`build-kernel.yml`) just calls them in order. This keeps each concern
-isolated and easy to modify without touching the rest of the pipeline.
+(`build-kernel.yml`) just calls them in order.
 
 ## Setup
 
-1. Push this whole `.github/` folder to a new GitHub repo.
-2. Go to **Actions** → **Build Android Kernel (android12-5.10)** → **Run workflow**.
+1. Push this repo to GitHub (or use it directly).
+2. Go to **Actions** → **Build Android Kernel (android12-5.10)** → **Run workflow**,
+   or just push to `main`.
+3. Download the `kernel-<branch>-<run_number>` artifact and flash it from a
+   custom recovery (or via Magisk — `do.systemless=1`).
 
 ## Inputs (workflow_dispatch)
 
 | Input | Default | Meaning |
 |---|---|---|
-| `kernel_branch` | `android12-5.10` | Branch/tag of `kernel/common` and `kernel/build` |
+| `kernel_branch` | `android12-5.10` | Branch/tag of `kernel/common` to build |
+| `manifest_branch` | `master-kernel-build-2021` | Manifest default revision shared by `kernel/build`, prebuilt build-tools, mkbootimg, and the gcc hermetic sysroot |
 | `build_config` | `common/build.config.gki.aarch64` | Build config to build |
 | `lto` | `thin` | LTO mode: `thin` \| `full` \| `none` |
-| `clang_version` | `clang-r416183b` | Clang prebuilt folder name |
-| `clang_ref` | `master-kernel-build-2021` | Git ref on the clang prebuilts repo |
+| `clang_version` | `clang-r547379` | Clang prebuilt folder name (latest on the clang repo's `main`) |
+| `clang_ref` | `main` | Branch/ref on `platform/prebuilts/clang/host/linux-x86` that contains `clang_version` |
 | `ksu_ref` | *(empty)* | KernelSU-Next tag/commit to pin; empty = latest tag |
 
-If you switch `kernel_branch` to a different Android/kernel version, check
-that branch's `build.config.common` for the correct `CLANG_VERSION` and
-update `clang_version`/`clang_ref` to match. Also confirm the defconfig path
-used in `setup-kernelsu` (`common/arch/arm64/configs/gki_defconfig` by
-default) matches that branch's layout.
+If you switch `kernel_branch`, also update `manifest_branch` to that branch's
+manifest default revision, and make sure `clang_version` exists on `clang_ref`.
+The toolchain action auto-aliases the clang folder name pinned in
+`build.config.common` to the downloaded `clang_version`, so you only need a
+version that exists on the clang repo.
 
 ## Output
 
-Finished kernel images are uploaded as a downloadable **Actions artifact**
-named `kernel-<branch>-<run_number>` (kept 14 days).
+The artifact is the **flashable AnyKernel3 zip** itself (not a zip inside a
+zip): `META-INF/`, `anykernel.sh`, `Image` and `tools/` sit at its root, built
+from the `kernel-zipping/` template with the freshly compiled kernel image.
+Artifacts are kept for 14 days.
+
+## Operational notes
+
+- **Runner:** pinned to `ubuntu-22.04`, the best-tested host for the
+  2021-era prebuilt toolchain (clang-r416183b era, gcc-4.8 hermetic sysroot).
+- **Hermetic build:** android12-5.10 builds with `HERMETIC_TOOLCHAIN=1`, so
+  host tools compile against the gcc host prebuilt's sysroot — `setup-toolchain`
+  clones it (`prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8`).
+- **Release string:** the `-dirty` suffix is stripped from `setlocalversion`
+  (the tree has uncommitted KernelSU-Next changes), e.g.
+  `5.10.223-android12-9-g<sha>`.
+- **KMI/ABI check:** strict KMI symbol comparison is disabled
+  (`KMI_SYMBOL_LIST_STRICT_MODE=0`) — KernelSU modifies kernel internals, so
+  the build intentionally does not preserve the GKI ABI.
 
 ## Automatic triggers
 
+- `workflow_dispatch` (manual)
 - Every push to `main`
 - Weekly, Monday 00:00 UTC (remove the `schedule:` block if unwanted)
 
