@@ -110,3 +110,15 @@ top of KernelSU-Next — see `patches/susfs/README.md` for details.
 - After flashing, install the SUSFS userspace module (e.g.
   [sidex15/susfs4ksu-module](https://github.com/sidex15/susfs4ksu-module))
   through the KernelSU-Next manager to use `ksu_susfs`.
+
+## License
+
+This project (workflows, composite actions, patches, README) is licensed under
+the **GNU General Public License v3.0 or later** — see [LICENSE](LICENSE).
+
+Bundled or fetched components keep their own licenses:
+
+- `kernel-zipping/` (AnyKernel3 template) — BSD-style, see its `LICENSE`.
+- `KernelSU-Next` — cloned at build time, subject to its own license.
+- `patches/susfs/` — adapted from `simonpunk/susfs4ksu`, subject to its own
+  license.
