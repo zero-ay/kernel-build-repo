@@ -156,7 +156,7 @@ index d40d0ec..93f5388 100644
 +
  # Keep a new line here!! Because someone may append config
 diff --git a/kernel/core/init.c b/kernel/core/init.c
-index c158df8..c2dfc5b 100644
+index c158df8..1c0e38b 100644
 --- a/kernel/core/init.c
 +++ b/kernel/core/init.c
 @@ -5,6 +5,9 @@
@@ -169,7 +169,7 @@ index c158df8..c2dfc5b 100644
  
  #include "policy/allowlist.h"
  #include "policy/app_profile.h"
-@@ -12,27 +15,18 @@
+@@ -12,27 +15,19 @@
  #include "klog.h" // IWYU pragma: keep
  #include "manager/manager_observer.h"
  #include "manager/throne_tracker.h"
@@ -184,9 +184,12 @@ index c158df8..c2dfc5b 100644
 -#include "hook/syscall_hook.h"
  #include "feature/adb_root.h"
  #include "feature/selinux_hide.h"
--#include "feature/sulog.h"
+ #include "feature/sulog.h"
 -#include "infra/symbol_resolver.h"
--
++#include "hook/setuid_hook.h"
++#include "feature/sucompat.h"
++
+ 
 -#if defined(__x86_64__)
 -#include <asm/cpufeature.h>
 -#include <linux/version.h>
@@ -194,14 +197,10 @@ index c158df8..c2dfc5b 100644
 -#error "FATAL: Your kernel is missing the indirect syscall bypass patches!"
 -#endif
 -#endif
-+#include "hook/setuid_hook.h"
-+#include "feature/sucompat.h"
-+
-+
  
  // workaround for A12-5.10 kernel
  // Some third-party kernel (e.g. linegaeOS) uses wrong toolchain, which supports
-@@ -72,7 +66,6 @@ __attribute__((naked)) int __init kernelsu_init_early(void)
+@@ -72,7 +67,6 @@ __attribute__((naked)) int __init kernelsu_init_early(void)
  #endif
  
  struct cred *ksu_cred;
@@ -209,7 +208,7 @@ index c158df8..c2dfc5b 100644
  
  #ifdef CONFIG_KSU_DEBUG
  bool allow_shell = true;
-@@ -86,27 +79,6 @@ module_param_named(norc, ksu_no_custom_rc, bool, 0);
+@@ -86,27 +80,6 @@ module_param_named(norc, ksu_no_custom_rc, bool, 0);
  
  int __init kernelsu_init(void)
  {
@@ -237,7 +236,7 @@ index c158df8..c2dfc5b 100644
  
  #ifdef CONFIG_KSU_DEBUG
  	pr_alert("*************************************************************");
-@@ -117,9 +89,11 @@ int __init kernelsu_init(void)
+@@ -117,9 +90,11 @@ int __init kernelsu_init(void)
  	pr_alert("**     NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE    **");
  	pr_alert("*************************************************************");
  #endif
@@ -252,7 +251,7 @@ index c158df8..c2dfc5b 100644
  
  	ksu_cred = prepare_creds();
  	if (!ksu_cred) {
-@@ -127,79 +101,39 @@ int __init kernelsu_init(void)
+@@ -127,79 +102,39 @@ int __init kernelsu_init(void)
  		return -ENOSYS;
  	}
  
@@ -347,7 +346,7 @@ index c158df8..c2dfc5b 100644
  
  	// Wait for any in-flight RCU readers (e.g. handler traversing allow_list)
  	synchronize_rcu();
-@@ -213,8 +147,6 @@ void __exit kernelsu_exit(void)
+@@ -213,8 +148,6 @@ void __exit kernelsu_exit(void)
  
  	ksu_selinux_hide_exit();
  
