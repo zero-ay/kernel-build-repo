@@ -35,11 +35,6 @@ on:
         description: 'KernelSU-Next tag/commit to check out (leave empty for latest tag)'
         required: false
         default: ''
-  push:
-    branches: [ main ]
-  schedule:
-    # Rebuild weekly, Monday 00:00 UTC — remove if you don't want auto rebuilds
-    - cron: '0 0 * * 1'
 
 env:
   KERNEL_BRANCH: ${{ github.event.inputs.kernel_branch || 'android12-5.10' }}

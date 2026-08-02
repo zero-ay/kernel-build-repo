@@ -29,8 +29,7 @@ self-contained, reusable unit with its own inputs. The main workflow
 ## Setup
 
 1. Push this repo to GitHub (or use it directly).
-2. Go to **Actions** → **Build Android Kernel (android12-5.10)** → **Run workflow**,
-   or just push to `main`.
+2. Go to **Actions** → **Build Android Kernel (android12-5.10)** → **Run workflow**.
 3. Download the `kernel-<branch>-<run_number>` artifact and flash it from a
    custom recovery (or via Magisk — `do.systemless=1`).
 
@@ -73,11 +72,11 @@ Artifacts are kept for 14 days.
   (`KMI_SYMBOL_LIST_STRICT_MODE=0`) — KernelSU modifies kernel internals, so
   the build intentionally does not preserve the GKI ABI.
 
-## Automatic triggers
+## Trigger
 
-- `workflow_dispatch` (manual)
-- Every push to `main`
-- Weekly, Monday 00:00 UTC (remove the `schedule:` block if unwanted)
+The workflow only runs when you trigger it manually: **Actions** →
+**Build Android Kernel (android12-5.10)** → **Run workflow**. There are no
+automatic triggers (no push/schedule), so pushes to `main` won't start a build.
 
 ## Modifying the kernel further
 
