@@ -39,16 +39,13 @@ self-contained, reusable unit with its own inputs. The main workflow
 | Input | Default | Meaning |
 |---|---|---|
 | `kernel_branch` | `android12-5.10` | Branch/tag of `kernel/common` to build |
-| `manifest_branch` | `master-kernel-build-2021` | Manifest default revision shared by `kernel/build`, prebuilt build-tools, mkbootimg, and the gcc hermetic sysroot |
-| `clang_version` | `clang-r416183b` | Clang prebuilt folder name — the android12-5.10 manifest-era toolchain. Keep it on the era clang: newer clangs (e.g. `clang-r547379`) drop `__stack_chk_guard` from ksymtab and fail the KMI check |
-| `clang_ref` | `master-kernel-build-2021` | Branch/ref on `platform/prebuilts/clang/host/linux-x86` that contains `clang_version` (the era clang lives on `master-kernel-build-2021`) |
 | `ksu_ref` | `v3.3.0` | KernelSU-Next tag/commit to check out. Must match the version the SUSFS patch in `patches/susfs/` was adapted for; bumping it requires re-basing that patch. |
 
-If you switch `kernel_branch`, also update `manifest_branch` to that branch's
-manifest default revision, and make sure `clang_version` exists on `clang_ref`.
-The toolchain action auto-aliases the clang folder name pinned in
-`build.config.common` to the downloaded `clang_version`, so you only need a
-version that exists on the clang repo.
+Toolchain (`kernel/build`, `prebuilts/build-tools`, the AOSP clang repo, the gcc
+hermetic sysroot, mkbootimg) is cloned shallow (`--depth=1`) from the official
+Google repos on their default branches — see `setup-toolchain` and
+`clone-kernel-source`. The newest `clang-r*` folder in the clang clone is
+auto-linked to the path `build.config.common` expects.
 
 ## Output
 
@@ -60,7 +57,7 @@ Artifacts are kept for 14 days.
 ## Operational notes
 
 - **Runner:** pinned to `ubuntu-22.04`, the best-tested host for the
-  2021-era prebuilt toolchain (clang-r416183b era, gcc-4.8 hermetic sysroot).
+  prebuilt toolchain (gcc-4.8 hermetic sysroot).
 - **Hermetic build:** android12-5.10 builds with `HERMETIC_TOOLCHAIN=1`, so
   host tools compile against the gcc host prebuilt's sysroot — `setup-toolchain`
   clones it (`prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8`).
@@ -69,10 +66,9 @@ Artifacts are kept for 14 days.
   `5.10.223-android12-9-g<sha>`.
 - **KMI/ABI check:** enabled. `build.config.gki.aarch64` defaults
   `KMI_SYMBOL_LIST_STRICT_MODE` to 1 (1-1 match of the KMI symbol list against
-  the built vmlinux), and the build passes with the manifest-era clang.
-  KernelSU-Next/SUSFS do not conflict with the GKI KMI; the earlier KMI failure
-  was caused by building with a much newer clang (`clang-r547379`), which
-  changed symbol emission (e.g. `__stack_chk_guard` missing from ksymtab).
+  the built vmlinux). Note: some newer clangs drop `__stack_chk_guard` from
+  ksymtab, which fails this check; if the newest clang in the shallow clone
+  breaks it, point the toolchain at an older clang branch/folder.
 
 ## Trigger
 

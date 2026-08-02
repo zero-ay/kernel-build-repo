@@ -7,22 +7,6 @@ on:
         description: 'kernel/common branch/tag to build'
         required: false
         default: 'android12-5.10'
-      manifest_branch:
-        description: >
-          Manifest default revision for kernel_branch — shared by kernel/build,
-          prebuilt build-tools, mkbootimg, and the gcc hermetic sysroot.
-          Clang comes separately from clang_ref. Check the kernel_branch's
-          manifest default.xml <default revision="..."> if you change kernel_branch.
-        required: false
-        default: 'master-kernel-build-2021'
-      clang_version:
-        description: 'Clang prebuilt version (folder name under prebuilts-master/clang/host/linux-x86)'
-        required: false
-        default: 'clang-r416183b'
-      clang_ref:
-        description: 'Branch/ref on platform/prebuilts/clang/host/linux-x86 that contains clang_version (the android12-5.10 era clang lives on master-kernel-build-2021)'
-        required: false
-        default: 'master-kernel-build-2021'
       ksu_ref:
         description: 'KernelSU-Next tag/commit to check out (must be the version the SUSFS patch was adapted for — see patches/susfs/)'
         required: false
@@ -30,15 +14,12 @@ on:
 
 env:
   KERNEL_BRANCH: ${{ github.event.inputs.kernel_branch || 'android12-5.10' }}
-  MANIFEST_BRANCH: ${{ github.event.inputs.manifest_branch || 'master-kernel-build-2021' }}
-  CLANG_VERSION: ${{ github.event.inputs.clang_version || 'clang-r416183b' }}
-  CLANG_REF: ${{ github.event.inputs.clang_ref || 'master-kernel-build-2021' }}
   KSU_REF: ${{ github.event.inputs.ksu_ref || 'v3.3.0' }}
 
 jobs:
   build:
-    # 22.04 is the best-tested host for the 2021-era prebuilt toolchain
-    # (clang-r416183b, gcc-4.8 hermetic sysroot prebuilts).
+    # 22.04 is the best-tested host for the prebuilt toolchain
+    # (gcc-4.8 hermetic sysroot prebuilts).
     runs-on: ubuntu-22.04
     timeout-minutes: 120
 
@@ -54,7 +35,6 @@ jobs:
         uses: ./.github/actions/clone-kernel-source
         with:
           kernel_branch: ${{ env.KERNEL_BRANCH }}
-          build_branch: ${{ env.MANIFEST_BRANCH }}
 
       - name: Setup KernelSU-Next
         uses: ./.github/actions/setup-kernelsu
@@ -68,10 +48,6 @@ jobs:
 
       - name: Setup toolchain
         uses: ./.github/actions/setup-toolchain
-        with:
-          clang_version: ${{ env.CLANG_VERSION }}
-          clang_ref: ${{ env.CLANG_REF }}
-          toolchain_branch: ${{ env.MANIFEST_BRANCH }}
 
       - name: Build kernel
         id: build

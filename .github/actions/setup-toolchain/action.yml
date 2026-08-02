@@ -1,43 +1,37 @@
 name: 'Setup Toolchain'
-description: 'Clones all prebuilt toolchain/host-tool repos at the exact paths build.sh expects'
-
-inputs:
-  clang_version:
-    description: 'Clang prebuilt folder name (e.g. clang-r547379)'
-    required: true
-  clang_ref:
-    description: 'Branch/ref on platform/prebuilts/clang/host/linux-x86 that contains clang_version (latest lives on main)'
-    required: false
-    default: 'main'
-  toolchain_branch:
-    description: 'Branch shared by the non-clang prebuilt repos (manifest default revision for this kernel_branch)'
-    required: false
-    default: 'master-kernel-build-2021'
+description: 'Clones the official Google AOSP prebuilts (shallow, --depth=1, default branches) at the paths build.sh expects'
 
 runs:
   using: 'composite'
   steps:
+    # Official Google AOSP Prebuilt Clang, deep history excluded (--depth=1).
+    - name: Clone official AOSP prebuilt clang (shallow)
+      shell: bash
+      run: |
+        git clone --depth=1 https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 \
+          prebuilts-clang
+
     # Generic AOSP host tools (nproc, awk, bc, etc.) — referenced by
     # build/build-tools/path/linux-x86/* symlinks inside the kernel/build repo
     - name: Clone platform/prebuilts/build-tools
       shell: bash
       run: |
-        git clone https://android.googlesource.com/platform/prebuilts/build-tools \
-          -b "${{ inputs.toolchain_branch }}" --depth=1 prebuilts/build-tools
+        git clone --depth=1 https://android.googlesource.com/platform/prebuilts/build-tools \
+          prebuilts/build-tools
 
     # Kernel-specific host tools (pahole, etc.)
     - name: Clone kernel/prebuilts/build-tools
       shell: bash
       run: |
-        git clone https://android.googlesource.com/kernel/prebuilts/build-tools \
-          -b "${{ inputs.toolchain_branch }}" --depth=1 prebuilts/kernel-build-tools
+        git clone --depth=1 https://android.googlesource.com/kernel/prebuilts/build-tools \
+          prebuilts/kernel-build-tools
 
     # mkbootimg — needed to assemble boot.img
     - name: Clone mkbootimg
       shell: bash
       run: |
-        git clone https://android.googlesource.com/platform/system/tools/mkbootimg \
-          -b "${{ inputs.toolchain_branch }}" --depth=1 tools/mkbootimg
+        git clone --depth=1 https://android.googlesource.com/platform/system/tools/mkbootimg \
+          tools/mkbootimg
 
     # Hermetic host sysroot (glibc headers/libs for host tools). Required by
     # HERMETIC_TOOLCHAIN=1: build/build-tools/sysroot is a symlink to
@@ -45,42 +39,32 @@ runs:
     - name: Clone gcc host prebuilt (hermetic sysroot)
       shell: bash
       run: |
-        git clone https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8 \
-          -b "${{ inputs.toolchain_branch }}" --depth=1 \
+        git clone --depth=1 https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8 \
           prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8
 
-    - name: Cache Clang toolchain
-      id: clang-cache
-      uses: actions/cache@v4
-      with:
-        path: prebuilts-master/clang/host/linux-x86/${{ inputs.clang_version }}
-        key: clang-${{ inputs.clang_version }}-${{ inputs.clang_ref }}
-
-    - name: Download Clang prebuilt (archive, not full history)
-      if: steps.clang-cache.outputs.cache-hit != 'true'
-      shell: bash
-      run: |
-        mkdir -p "prebuilts-master/clang/host/linux-x86/${{ inputs.clang_version }}"
-        curl -L "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/${{ inputs.clang_ref }}/${{ inputs.clang_version }}.tar.gz" \
-          -o clang.tar.gz
-        tar -xzf clang.tar.gz -C "prebuilts-master/clang/host/linux-x86/${{ inputs.clang_version }}"
-        rm clang.tar.gz
-
     # kernel/build's build.config.common pins CLANG_PREBUILT_BIN to a specific
-    # clang folder (e.g. clang-r416183b). Point that name at the version we
-    # downloaded so the newer clang is actually used.
-    - name: Alias downloaded clang to config-expected path
+    # clang folder (e.g. clang-r416183b). The shallow clone carries the newest
+    # clang-r* folder(s) of its default branch, so link the config-expected name
+    # to the newest available folder in the clone.
+    - name: Link config-expected clang path to the shallow clone
       shell: bash
       run: |
         CLANG_ROOT="prebuilts-master/clang/host/linux-x86"
+        CLANG_VERSION=$(ls -d prebuilts-clang/clang-r* 2>/dev/null | sed 's#.*/##' | sort -V | tail -n1)
+        test -n "${CLANG_VERSION}" || {
+          echo "::error::no clang-r* folder found in prebuilts-clang"
+          exit 1
+        }
         EXPECTED=$(sed -n 's#^CLANG_PREBUILT_BIN=.*/\(clang-r[^/]*\)/bin$#\1#p' common/build.config.common | head -n1)
-        if [ -n "${EXPECTED}" ] && [ "${EXPECTED}" != "${{ inputs.clang_version }}" ]; then
-          ln -sfn "${{ inputs.clang_version }}" "${CLANG_ROOT}/${EXPECTED}"
-          echo "Linked ${CLANG_ROOT}/${EXPECTED} -> ${{ inputs.clang_version }}"
-        fi
+        : "${EXPECTED:=clang-r416183b}"
+        mkdir -p "${CLANG_ROOT}"
+        ln -sfn "${GITHUB_WORKSPACE}/prebuilts-clang/${CLANG_VERSION}" "${CLANG_ROOT}/${EXPECTED}"
+        echo "Linked ${CLANG_ROOT}/${EXPECTED} -> prebuilts-clang/${CLANG_VERSION} (newest in shallow clone)"
+        test -x "${CLANG_ROOT}/${EXPECTED}/bin/clang" || \
+          echo "::warning::clang binary not found at ${CLANG_ROOT}/${EXPECTED}/bin/clang"
 
     - name: Make prebuilt binaries executable
       shell: bash
       run: |
-        chmod +x "prebuilts-master/clang/host/linux-x86/${{ inputs.clang_version }}/bin/"* || true
+        chmod +x prebuilts-clang/clang-r*/bin/* 2>/dev/null || true
         find prebuilts/build-tools prebuilts/kernel-build-tools prebuilts/gcc tools/mkbootimg -type f -exec chmod +x {} \; 2>/dev/null || true
