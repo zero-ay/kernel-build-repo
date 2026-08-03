@@ -69,21 +69,21 @@ runs:
           exit 1
         fi
         python3 - "$DF" <<'PY'
-import sys
-p = sys.argv[1]
-s = open(p).read()
-anchor = 'CONFIG_INET_DIAG_DESTROY=y\n'
-block = (
-    'CONFIG_TCP_CONG_ADVANCED=y\n'
-    '# CONFIG_TCP_CONG_BIC is not set\n'
-    '# CONFIG_TCP_CONG_WESTWOOD is not set\n'
-    '# CONFIG_TCP_CONG_HTCP is not set\n'
-    'CONFIG_TCP_CONG_BBR3=y\n'
-)
-if anchor in s:
-    s = s.replace(anchor, anchor + block)
-elif 'CONFIG_TCP_CONG_BBR3=y' not in s:
-    s += block
-open(p, 'w').write(s)
-PY
+        import sys
+        p = sys.argv[1]
+        s = open(p).read()
+        anchor = 'CONFIG_INET_DIAG_DESTROY=y\n'
+        block = (
+            'CONFIG_TCP_CONG_ADVANCED=y\n'
+            '# CONFIG_TCP_CONG_BIC is not set\n'
+            '# CONFIG_TCP_CONG_WESTWOOD is not set\n'
+            '# CONFIG_TCP_CONG_HTCP is not set\n'
+            'CONFIG_TCP_CONG_BBR3=y\n'
+        )
+        if anchor in s:
+            s = s.replace(anchor, anchor + block)
+        elif 'CONFIG_TCP_CONG_BBR3=y' not in s:
+            s += block
+        open(p, 'w').write(s)
+        PY
         grep -E 'TCP_CONG_(ADVANCED|BBR3|BIC|HTCP|WESTWOOD)' "$DF"
