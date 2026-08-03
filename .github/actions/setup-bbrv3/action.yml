@@ -1,18 +1,89 @@
 name: 'Setup TCP BBRv3'
 description: >
-  Applies the TCP BBR v3 port (patches/bbrv3/) to the common kernel source.
-  The patch backports Google's TCP BBR v3 (github.com/google/bbr, branch v3)
-  from upstream Linux 6.13.7 onto android12-5.10, and enables it in the GKI
-  defconfig (CONFIG_TCP_CONG_ADVANCED + CONFIG_TCP_CONG_BBR) without touching
-  net.ipv4.tcp_congestion_control (the default CC stays CUBIC; BBRv3 is
-  selectable via sysctl).
+  Applies the fatalcoder524 BBRv3 backport for the kernel being built
+  (patches/bbrv3/). The folder holds one net-tcp-backport-BBRv3 patch per
+  android12-5.10 / android13-5.15 / android14-6.1 / android15-6.6, plus two
+  optional sysctl prerequisites. This action picks the patch matching
+  kernel_branch, enables CONFIG_TCP_CONG_BBR3 in the GKI defconfig (keeping
+  the loadable-module list empty), and uses patch -p1 -F2 like the SUSFS step.
+
+inputs:
+  kernel_branch:
+    description: 'kernel/common branch/tag being built (matches the workflow kernel_branch input)'
+    required: true
 
 runs:
   using: 'composite'
   steps:
+    - name: Map kernel branch to BBRv3 patch
+      id: bbrpatch
+      shell: bash
+      run: |
+        set -e
+        case "${{ inputs.kernel_branch }}" in
+          android12-5.10) v=android12-5.10 ;;
+          android13-5.15) v=android13-5.15 ;;
+          android14-6.1)  v=android14-6.1 ;;
+          android15-6.6)  v=android15-6.6 ;;
+          *)
+            echo "::error::Unsupported kernel_branch '${{ inputs.kernel_branch }}' for BBRv3 (expected android12-5.10|android13-5.15|android14-6.1|android15-6.6)."
+            exit 1
+            ;;
+        esac
+        echo "bbr3_patch=${{ github.workspace }}/patches/bbrv3/0001-net-tcp-backport-BBRv3-to-${v}.patch" >> "$GITHUB_OUTPUT"
+
+    # Best-effort sysctl prerequisites (proc_dou8vec_minmax). The GKI branches
+    # already carry these, so this normally applies nothing; it exists only for
+    # bases/forks that lack them.
+    - name: Apply sysctl prerequisites (best-effort)
+      shell: bash
+      working-directory: common
+      run: |
+        for p in sysctl_add_proc_dou8vec_minmax sysctl_fix_data-races_in_proc_dou8vec_minmax; do
+          f="${{ github.workspace }}/patches/bbrv3/${p}.patch"
+          if patch -p1 -F2 --dry-run < "$f" >/dev/null 2>&1; then
+            patch -p1 -F2 < "$f"
+          else
+            echo "Skip ${p}.patch (does not apply to this base)"
+          fi
+        done
+
     - name: Apply BBRv3 patch in common/
       shell: bash
       working-directory: common
       run: |
         set -e
-        patch -p1 -F2 < "${{ github.workspace }}/patches/bbrv3/50_add_bbrv3_in_gki-android12-5.10.patch"
+        patch -p1 -F2 < "${{ steps.bbrpatch.outputs.bbr3_patch }}"
+
+    # Enable BBRv3 for GKI without adding loadable modules (the GKI module list
+    # must stay empty). These defconfig lines round-trip through
+    # scripts/savedefconfig, so check_defconfig is unaffected.
+    - name: Enable CONFIG_TCP_CONG_* in GKI defconfig
+      shell: bash
+      working-directory: common
+      run: |
+        set -e
+        DF=arch/arm64/configs/gki_defconfig
+        if [ ! -f "$DF" ]; then
+          echo "::error::No $DF in this branch; BBRv3 code is present but not enabled."
+          exit 1
+        fi
+        python3 - "$DF" <<'PY'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+anchor = 'CONFIG_INET_DIAG_DESTROY=y\n'
+block = (
+    'CONFIG_TCP_CONG_ADVANCED=y\n'
+    '# CONFIG_TCP_CONG_BIC is not set\n'
+    '# CONFIG_TCP_CONG_WESTWOOD is not set\n'
+    '# CONFIG_TCP_CONG_HTCP is not set\n'
+    'CONFIG_TCP_CONG_BBR3=y\n'
+)
+if anchor in s:
+    s = s.replace(anchor, anchor + block)
+elif 'CONFIG_TCP_CONG_BBR3=y' not in s:
+    s += block
+open(p, 'w').write(s)
+PY
+        grep -E 'TCP_CONG_(ADVANCED|BBR3|BIC|HTCP|WESTWOOD)' "$DF"

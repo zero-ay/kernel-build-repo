@@ -24,7 +24,7 @@ AnyKernel3 template.
 │       └── build-kernel/              # strips -dirty, runs the pinned build.sh command, locates dist/
 ├── patches/
 │   ├── susfs/                         # SUSFS patchset adapted for KernelSU-Next v3.3.0: 10_enable + 50_add patches, fs/susfs.c, include/linux/susfs*.h
-│   └── bbrv3/                         # TCP BBR v3 port (github.com/google/bbr @ v3) for the common kernel
+│   └── bbrv3/                         # BBRv3 backport patchset (fatalcoder524) for android12-5.10 / 13-5.15 / 14-6.1 / 15-6.6
 └── kernel-zipping/                    # AnyKernel3 flashable zip template
 ```
 
@@ -97,24 +97,25 @@ automatic triggers (no push/schedule), so pushes to `main` won't start a build.
 
 ## TCP BBR v3
 
-The build integrates **TCP BBR v3** (Google's modularized `bbr` congestion
-control) into the common kernel — see `patches/bbrv3/README.md` for the full
-detail.
+The build integrates **TCP BBR v3** into the common kernel via the
+fatalcoder524 backport patchset in `patches/bbrv3/` (one patch per
+android12-5.10 / android13-5.15 / android14-6.1 / android15-6.6, plus two
+optional sysctl prerequisites). It adds a separate `net/ipv4/tcp_bbr3.c`
+module (`CONFIG_TCP_CONG_BBR3`).
 
-- **Source:** `github.com/google/bbr`, branch `v3` (based on upstream Linux
-  6.13.7), backported to android12-5.10.
-- **Applied by:** the `setup-bbrv3` action (`patch -p1 -F2` on the freshly
-  cloned `common/`), immediately after SUSFS.
-- **Enablement:** `arch/arm64/configs/gki_defconfig` gets
-  `CONFIG_TCP_CONG_ADVANCED=y` and `CONFIG_TCP_CONG_BBR=y`, plus
-  `# CONFIG_TCP_CONG_BIC/HTCP/WESTWOOD is not set` to keep GKI's loadable-module
-  list empty. All lines round-trip through `savedefconfig`, so `check_defconfig`
-  is unaffected. The default CC stays CUBIC — BBRv3 is *selectable*, not the
-  default.
-- **Use after flashing:** `sysctl -w net.ipv4.tcp_congestion_control=bbr`
-  (or `ip route ... congestion_control bbr`).
-- **Compatibility:** new exports are kept out of the KMI (`TRIM_NONLISTED_KMI`
-  trims the `tcp_plb_*` GPL exports), so the 1-1 KMI check is unaffected.
+- **Applied by:** the `setup-bbrv3` action, immediately after SUSFS. It picks
+  `0001-net-tcp-backport-BBRv3-to-<branch>.patch` matching the workflow's
+  `kernel_branch`, applies sysctl prerequisites best-effort (they don't apply
+  to 5.10+, which already have `proc_dou8vec_minmax`), then applies the patch
+  with `patch -p1 -F2`.
+- **Enablement:** the action edits `arch/arm64/configs/gki_defconfig` to set
+  `CONFIG_TCP_CONG_ADVANCED=y` and `CONFIG_TCP_CONG_BBR3=y`, plus
+  `# CONFIG_TCP_CONG_BIC/HTCP/WESTWOOD is not set` to keep GKI's
+  loadable-module list empty. The lines round-trip through `savedefconfig`, so
+  `check_defconfig` is unaffected. The default CC stays CUBIC; BBRv3 is
+  *selectable*, not the default.
+- **Use after flashing:** `sysctl -w net.ipv4.tcp_congestion_control=bbr3`
+  (or `ip route ... congestion_control bbr3`).
 
 ## SUSFS (root hiding)
 

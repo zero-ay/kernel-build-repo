@@ -48,6 +48,8 @@ jobs:
 
       - name: Setup TCP BBR v3
         uses: ./.github/actions/setup-bbrv3
+        with:
+          kernel_branch: ${{ env.KERNEL_BRANCH }}
 
       - name: Setup toolchain
         uses: ./.github/actions/setup-toolchain
