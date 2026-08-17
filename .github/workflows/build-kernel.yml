@@ -18,9 +18,8 @@ env:
 
 jobs:
   build:
-    # 22.04 is the best-tested host for the prebuilt toolchain
     # (gcc-4.8 hermetic sysroot prebuilts).
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 120
 
     steps:
