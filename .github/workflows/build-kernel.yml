@@ -8,7 +8,7 @@ on:
         required: false
         default: 'android12-5.10'
       ksu_ref:
-        description: 'KernelSU-Next tag/commit to check out (must be the version the SUSFS patch was adapted for — see patches/susfs/)'
+        description: 'KernelSU-Next tag/commit to check out'
         required: false
         default: 'v3.3.0'
 
@@ -37,11 +37,6 @@ jobs:
 
       - name: Setup KernelSU-Next
         uses: ./.github/actions/setup-kernelsu
-        with:
-          ksu_ref: ${{ env.KSU_REF }}
-
-      - name: Setup SUSFS (patches for KernelSU-Next)
-        uses: ./.github/actions/setup-susfs
         with:
           ksu_ref: ${{ env.KSU_REF }}
 
