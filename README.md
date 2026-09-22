@@ -4,7 +4,7 @@ Builds the Android Common Kernel via GitHub Actions, integrating KernelSU-Next,
 and packages the result into a **flashable AnyKernel3 zip**. Kernel source,
 build scripts, and toolchain are all cloned fresh on the runner each run — no
 `repo init`/`repo sync`, and the only things committed to this repo are the
-workflow, its composite actions, the SUSFS patchset (`patches/susfs/`), and the
+workflow, its composite actions, the patchset (`patches/`), and the
 AnyKernel3 template.
 
 ## Structure
@@ -18,12 +18,10 @@ AnyKernel3 template.
 │       ├── install-deps/              # host packages (apt)
 │       ├── clone-kernel-source/       # kernel/common (kernel_branch input) + kernel/build @ master-kernel-build-2021 (the branch that ships build.sh)
 │       ├── setup-kernelsu/            # KernelSU-Next integration (CONFIG_KSU via its Kconfig default)
-│       ├── setup-susfs/               # applies the SUSFS patchset (patches/susfs/) to kernel + KernelSU-Next
 │       ├── setup-bbrv3/               # applies the TCP BBR v3 port (patches/bbrv3/) to common/
 │       ├── setup-toolchain/           # toolchain mirroring the official android12-5.10 manifest: shallow clones @ master-kernel-build-2021, clang-r416183b
 │       └── build-kernel/              # strips -dirty, runs the pinned build.sh command, locates dist/
 ├── patches/
-│   ├── susfs/                         # SUSFS patchset adapted for KernelSU-Next v3.3.0: 10_enable + 50_add patches, fs/susfs.c, include/linux/susfs*.h
 │   └── bbrv3/                         # BBRv3 backport patchset (fatalcoder524) for android12-5.10 / 13-5.15 / 14-6.1 / 15-6.6
 └── kernel-zipping/                    # AnyKernel3 flashable zip template
 ```
@@ -44,7 +42,7 @@ self-contained, reusable unit with its own inputs. The main workflow
 | Input | Default | Meaning |
 |---|---|---|
 | `kernel_branch` | `android12-5.10` | Branch/tag of `kernel/common` to build |
-| `ksu_ref` | `v3.3.0` | KernelSU-Next tag/commit to check out. Must match the version the SUSFS patch in `patches/susfs/` was adapted for; bumping it requires re-basing that patch. |
+| `ksu_ref` | `v3.3.0` | KernelSU-Next tag/commit to check out |
 
 Toolchain (`kernel/build`, `prebuilts/build-tools`, the AOSP clang repo, the gcc
 hermetic sysroot, mkbootimg) is cloned shallow (`--depth=1`) from the official
@@ -103,7 +101,7 @@ android12-5.10 / android13-5.15 / android14-6.1 / android15-6.6, plus two
 optional sysctl prerequisites). It adds a separate `net/ipv4/tcp_bbr3.c`
 module (`CONFIG_TCP_CONG_BBR3`).
 
-- **Applied by:** the `setup-bbrv3` action, immediately after SUSFS. It picks
+- **Applied by:** the `setup-bbrv3` action. It picks
   `0001-net-tcp-backport-BBRv3-to-<branch>.patch` matching the workflow's
   `kernel_branch`, applies sysctl prerequisites best-effort (they don't apply
   to 5.10+, which already have `proc_dou8vec_minmax`), then applies the patch
@@ -116,21 +114,3 @@ module (`CONFIG_TCP_CONG_BBR3`).
   *selectable*, not the default.
 - **Use after flashing:** `sysctl -w net.ipv4.tcp_congestion_control=bbr3`
   (or `ip route ... congestion_control bbr3`).
-
-## SUSFS (root hiding)
-
-The build integrates **SUSFS** (`susfs4ksu`, branch `gki-android12-5.10`) on
-top of KernelSU-Next — see `patches/susfs/README.md` for details.
-
-- `patches/susfs/10_enable_susfs_for_ksu.patch` is **adapted for KernelSU-Next
-  v3.3.0** (upstream's patch targets official KernelSU and does not apply to
-  KernelSU-Next). It is applied inside the `KernelSU-Next` checkout by
-  `setup-susfs`.
-- `patches/susfs/50_add_susfs_in_gki-android12-5.10.patch` plus
-  `fs/susfs.c` and `include/linux/susfs*.h` are applied to `common/`.
-- `CONFIG_KSU_SUSFS` and all `CONFIG_KSU_SUSFS_*` options are enabled via their
-  Kconfig `default y` (no defconfig edits — adding explicit lines would break
-  `check_defconfig`).
-- After flashing, install the SUSFS userspace module (e.g.
-  [sidex15/susfs4ksu-module](https://github.com/sidex15/susfs4ksu-module))
-  through the KernelSU-Next manager to use `ksu_susfs`.

@@ -5,7 +5,7 @@ description: >
   android12-5.10 / android13-5.15 / android14-6.1 / android15-6.6, plus two
   optional sysctl prerequisites. This action picks the patch matching
   kernel_branch, enables CONFIG_TCP_CONG_BBR3 in the GKI defconfig (keeping
-  the loadable-module list empty), and uses patch -p1 -F2 like the SUSFS step.
+  the loadable-module list empty), and uses patch -p1 -F2.
 
 inputs:
   kernel_branch:
